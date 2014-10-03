@@ -26,6 +26,12 @@ canvas#web_view {
 	z-index:1;
 }
 
+#total_view {
+	border: 1px;
+	border-color: black;
+	border-style: groove;
+}
+
 #screenSetModal {
 	display:none;
 	z-index:2;

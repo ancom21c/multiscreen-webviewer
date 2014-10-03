@@ -78,6 +78,14 @@ module.exports = {
 			
 		});
 		
+		socket.on('setViewport', function(viewport){
+			_sessionManager.setViewport(viewport);
+		});
+		
+		socket.on('setSessionViewport', function(s, viewport){
+			_sessionManager.setSessionViewport(s, viewport);
+		})
+		
 	},
 	manageRender : function(sid, data) {
 		//prototype

@@ -5,6 +5,8 @@ var socket = io.connect();
 var currentUrl;
 var pastUrl;
 var pastUrl;
+var pageViewport = {width: 1280, height:960};
+var viewport;
 var webview;
 $( document ).ready( function(){
 	
@@ -24,7 +26,10 @@ $( document ).ready( function(){
 	        resizable: false,
 	        width:'auto',
 	        height:'auto',
-	        modal: true
+	        modal: true,
+	        close: function(e, u) {
+	        	$("#rectangleArea").empty();
+	        }
 	 });
 		socket.emit('requestTotalRenderView');
 		socket.emit('requestSessionList');
@@ -48,23 +53,105 @@ $( document ).ready( function(){
 		var ctx = canvas.getContext("2d");
 		var image = new Image();
 		
+		pageViewport = data.pageViewport;
 		image.src = "data:image/jpeg;base64," + data.image;
 		
 		//canvas operation - scaling down
 
 		image.onload = function() {
-		    ctx.drawImage(image, 0, 0, 320, 240);
+		    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 		};
+		$("#pWidth").val(pageViewport.width);
+		$("#pHeight").val(pageViewport.height);
+		
+	});
+	
+	$("#pWidth").keydown(function(event) {
+		// Allow only backspace and delete
+		if ( event.keyCode == 46 || event.keyCode == 8 ) {
+			// let it happen, don't do anything
+		}
+		else {
+			// Ensure that it is a number and stop the keypress
+			if (event.keyCode < 48 || event.keyCode > 57 ) {
+				event.preventDefault();	
+			}	
+		}
+	});
+	$("#pHeight").keydown(function(event) {
+		// Allow only backspace and delete
+		if ( event.keyCode == 46 || event.keyCode == 8 ) {
+			// let it happen, don't do anything
+		}
+		else {
+			// Ensure that it is a number and stop the keypress
+			if (event.keyCode < 48 || event.keyCode > 57 ) {
+				event.preventDefault();	
+			}	
+		}
+	});
+	
+	$("#setViewport").on('click', function(e){
+		pageViewport.width  = $("#pWidth").val();
+		pageViewport.height = $("#pHeight").val();
+		setViewport();
 	});
 	
 	socket.on('sessionList', function(list){
-		console.log("sessionList");
-		console.log(list);
+
+		var canvas = $("#total_view").get(0);
+		
 		for( var s in list) {
-			var newRect = document.createElement('div');
-			console.log(list[s]);
+			var newRect = $(document.createElement('div'));
+			newRect.attr("id",s);
+			console.log(newRect.attr('id'));
+			var x = list[s].clientViewport.vx;
+			var y = list[s].clientViewport.vy;
+
+			var w = list[s].clientViewport.width;
+			var h = list[s].clientViewport.height;
 			
-			//$("#screenSetModal").append(newRect);
+			
+			x = x * canvas.width / pageViewport.width;
+			y = y * canvas.height / pageViewport.height;
+			w = w * canvas.width / pageViewport.width;
+			h = h * canvas.height / pageViewport.height;
+		
+			
+			newRect.css( "border", 1);
+			//TODO : let color be random!
+			newRect.css( 'border-color', "red");
+			newRect.css( 'border-style', "dashed")
+			newRect.css( "position", "absolute");
+			newRect.css( "left", x);
+			newRect.css( "top", y);
+			newRect.css( "width",  w);
+			newRect.css("height",h);
+			newRect.resizable({ 
+				resize: function(e, u){
+					var rw = u.size.width * pageViewport.width / canvas.width;
+					var rh = u.size.height * pageViewport.width / canvas.height;
+					list[s].clientViewport.width= rw;
+					list[s].clientViewport.height = rh;
+					
+					socket.emit("setSessionViewport",  u.originalElement.get(0)["id"],  list[s].clientViewport);
+					
+				},
+			});
+			newRect.draggable({ 
+				drag: function(e, u){
+					var rx = u.position.left * pageViewport.width / canvas.width;
+					var ry = u.position.top * pageViewport.width / canvas.height;
+					
+					 list[s].clientViewport.vx= rx;
+					 list[s].clientViewport.vy = ry;
+					socket.emit("setSessionViewport",   u.helper.get(0)["id"],  list[s].clientViewport);
+					
+				},
+			});
+			
+			
+			$("#rectangleArea").append(newRect);
 			
 			
 		}
@@ -82,7 +169,7 @@ $( document ).ready( function(){
 		_width = data.width;
 		_height = data.height;
 		
-		var viewport = data.viewport;
+		viewport = data.viewport;
 		var canvas = $("#web_view").get(0);
 		var ctx = canvas.getContext("2d");
 		var image = new Image();
@@ -108,6 +195,10 @@ $( document ).ready( function(){
 
 	
 });
+
+function setViewport() {
+	socket.emit("setViewport", pageViewport);
+}
 
 var gotourl = function() {
 	

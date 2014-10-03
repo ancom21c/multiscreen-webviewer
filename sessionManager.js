@@ -301,6 +301,7 @@ module.exports = {
 			segmentImg["index"] = session.index;
 			segmentImg["id"] = session.id;
 			segmentImg["viewport"] = session.clientViewport;
+			segmentImg["pageViewport"] = _webdriver.getViewport(); 
 			
 			_webdriver.manageRender(s, segmentImg);
 		}
@@ -308,6 +309,15 @@ module.exports = {
 	
 	getTotalRenderView : function() {
 		return totalRenderView;
+	},
+	
+	setViewport : function(viewport) {
+		_webdriver.setViewport(viewport.width, viewport,height);
+	},
+	
+	setSessionViewport : function(s, viewport) {
+		console.log(s);
+		sessionList[s].clientViewport = viewport;
 	},
 	
 	//binded Ph
