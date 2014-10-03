@@ -293,6 +293,8 @@ module.exports = {
 			
 			*/
 			
+			
+			
 			// Let clients deal this img... damn node-canvas
 			var segmentImg = img;
 			
