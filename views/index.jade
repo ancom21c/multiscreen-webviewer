@@ -1,0 +1,25 @@
+extends layout
+
+block content
+	div#headerArea
+		div#header-bar.ui-widget-header.ui-corner-all
+			form( action="javascript:gotourl()")
+				label
+					| URL
+				input#gotourl(type="text", name="gotourl")
+				button(type="submit")
+					| Go!
+				label
+					| Session 
+				label#sessionNum
+				button#screenSet(type="button")
+					| Setting
+			
+		span#toggleBt.toggleBt
+	div#webcontainer
+		div#log
+		canvas#web_view( style="width: 100%; height: 100%;")
+		//canvas#web_view(width=1280, height=960)
+	div#screenSetModal(title="Setting")
+		canvas#total_view( style="width=640px; height: 480px;")
+		
