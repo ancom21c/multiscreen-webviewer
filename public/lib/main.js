@@ -18,6 +18,22 @@ $( document ).ready( function(){
 		$('#header-bar').slideToggle("fast");
 
 	});
+	
+	$(window).resize(function(){
+		
+		/*
+		webview.get(0).width = window.innerWidth;
+		webview.get(0).height = window.innerHeight;
+
+		
+		socket.emit('hello', 'guys', {
+			clientResolution: { width : webview.width(), 
+				height: webview.height()
+				}
+		});
+		*/
+	});
+
 	console.log("Trying to connect mswebviewer-server");
 
 	$('#screenSet').on('click', function(){
@@ -54,11 +70,16 @@ $( document ).ready( function(){
 		var image = new Image();
 		
 		pageViewport = data.pageViewport;
-		image.src = "data:image/jpeg;base64," + data.image;
+		image.src = data.image;
+	
+		//image.src = "data:image/jpeg;base64," + data.image;
 		
 		//canvas operation - scaling down
 
 		image.onload = function() {
+			ctx.rect(0,0, canvas.width, canvas.height);
+			ctx.fillStyle = "white";
+			ctx.fill();
 		    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 		};
 		$("#pWidth").val(pageViewport.width);
@@ -104,7 +125,6 @@ $( document ).ready( function(){
 		for( var s in list) {
 			var newRect = $(document.createElement('div'));
 			newRect.attr("id",s);
-			console.log(newRect.attr('id'));
 			var x = list[s].clientViewport.vx;
 			var y = list[s].clientViewport.vy;
 
@@ -151,14 +171,14 @@ $( document ).ready( function(){
 			});
 			
 			
-			$("#rectangleArea").append(newRect);
+			$("#total_viewDiv").append(newRect);
+			//$("#rectangleArea").append(newRect);
 			
 			
 		}
 	});
 
 	socket.on('renderData', function(data){
-
 		currentUrl = data.url;
 		if(pastUrl != currentUrl) {
 			pastUrl = currentUrl;
@@ -166,22 +186,22 @@ $( document ).ready( function(){
 		}
 		$("#sessionNum").text(data.id);
 		
-		_width = data.width;
-		_height = data.height;
-		
 		viewport = data.viewport;
 		var canvas = $("#web_view").get(0);
 		var ctx = canvas.getContext("2d");
 		var image = new Image();
 		
-		image.src = "data:image/jpeg;base64," + data.image;
 
+		//image.src = data.image;
+		
+		//image.src = new Buffer("data:image/jpeg;base64," + data.image, 'base64');
+		image.src = "data:image/jpeg;base64," + data.image;
+		
 		image.onload = function() {
 			//ctx.rect(0,0, canvas.width, canvas.height);
 			//ctx.fillStyle = "white";
 			//ctx.fill();
 			
-		    //ctx.drawImage(image, 0, 0);
 			ctx.drawImage(image, viewport.vx, viewport.vy, viewport.width, viewport.height,
 					0,0, canvas.width, canvas.height);
 		

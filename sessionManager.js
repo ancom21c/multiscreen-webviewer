@@ -173,14 +173,12 @@ module.exports = {
 
 		if( numSession%2 == 0) {
 			//for even
-			console.log(numSession);
 			var c = 1;
 			for( var s in sessionList) {
 				var session = sessionList[s];
 		
 				if( numSession/2 > c ) {
 					//landscape
-					console.log("enter");
 					ps.clientViewport = { 
 							//prototype
 							vx: 0,
@@ -201,7 +199,6 @@ module.exports = {
 						width: viewport.width / (numSession > 2 ? numSession/2 : 2) , 
 						height: (numSession>2 ? viewport.height / 2 : viewport.height),
 				};
-				console.log(session.clientViewport);
 				
 				c++;
 				ps = session;
@@ -265,32 +262,38 @@ module.exports = {
 		totalRenderView = img;
 		var viewport = _webdriver.getViewport();	
 		var image = new Image();
-		image.src = "data:image/jpeg;base64," + img;
 		
 		
 		for(var s in sessionList) {
 			//console.log("let's get the show in the road");
 			var session = sessionList[s];
 			
-			/*
+		
 			var segCanvas = new Canvas(viewport.width,viewport.height);
-			var segCtx = canvas.getContext('2d');
+			var segCtx = segCanvas.getContext('2d');
 			
-			
+			/*
 			image.onload = function() {
-			
-				console.log("digimon chingudl");
 				segCtx.drawImage(image, session.clientViewport.vx, session.clientViewport.vy, session.clientViewport.width, session.clientViewport.height,
-						0,0, session.clientResolution.width, session.clientResolution.height);
-			
-				var segmentImg = segCanvas.toDataURL();
-	
+						0,0, session.clientResolution.width, session.clientResolution.height);	
+				
+				var segmentImg = img;
+				console.error(session);
+				
+				segmentImg["image"] = segCanvas.toDataURL();
 				segmentImg["index"] = session.index;
 				segmentImg["id"] = session.id;
+				segmentImg["viewport"] = session.clientViewport;
+				segmentImg["pageViewport"] = viewport; 
 				
 				_webdriver.manageRender(s, segmentImg);
 			};
-			
+			image.onerror = function(err) {
+				console.error(err);
+				console.error(session);
+			}
+
+			image.src = new Buffer(img.image, 'base64');
 			*/
 			
 			
@@ -304,6 +307,7 @@ module.exports = {
 			segmentImg["pageViewport"] = _webdriver.getViewport(); 
 			
 			_webdriver.manageRender(s, segmentImg);
+			
 		}
 	},
 	
@@ -312,12 +316,12 @@ module.exports = {
 	},
 	
 	setViewport : function(viewport) {
-		_webdriver.setViewport(viewport.width, viewport,height);
+		_webdriver.setViewport(parseInt(viewport.width), parseInt(viewport.height));
 	},
 	
 	setSessionViewport : function(s, viewport) {
-		console.log(s);
-		sessionList[s].clientViewport = viewport;
+		if(s !== undefined && viewport !== undefined)
+			sessionList[s].clientViewport = viewport;
 	},
 	
 	//binded Ph

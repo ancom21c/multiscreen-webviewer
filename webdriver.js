@@ -36,9 +36,12 @@ module.exports = {
 			
 			_socketCtrl.manageRender(sid, data);
 		},
-	
+		
 		sendEvent : function(e) {
+			//phantomjs
 			if( phPage !== undefined) {
+				
+		
 				if(e.type.indexOf("click") != -1 || e.type.indexOf("mouse") != -1){
 					phPage.sendEvent(e.type, e.pageX, e.pageY ,e.button);
 				}	
@@ -46,6 +49,7 @@ module.exports = {
 					
 					if(e["modifier"] == undefined)
 						e["modifier"] = 0;
+					
 					phPage.sendEvent(e.type, e.which, null, null,e.modifier);
 				}
 			}	
