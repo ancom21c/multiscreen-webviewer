@@ -1,5 +1,8 @@
+var _ = require('underscore');
+
 //session list
 var sessionList;
+var canvasList;
 var numSession;
 var _webdriver;
 var totalRenderView;
@@ -8,14 +11,27 @@ var lastSession;
 var Canvas = require("canvas"),
 	Image = Canvas.Image;
 
+
+var guideList;
+var guideIndex;
+var guideMode; // 0 : init, 1 : Guide(out), 2 : Guide(in)
+var guidePoints;
+var guidedViewports;
+
 module.exports = {
 	init : function(webdriver) {
 		console.log("Session Manager Initiated");
 		sessionList = {};
+		canvasList = {};
 		numSession = 0;
 		_webdriver = webdriver;
 		sessionIndex = 0;
 		lastSession = {};
+		guideList = [];
+		guidePoints = {};
+		guideIndex = 0;
+		guideMode = 0;
+		guidedViewports = {};
 	},
 	addSession : function(s, info) {
 		//info : 
@@ -29,11 +45,12 @@ module.exports = {
 			index: sessionIndex++,
 			clientViewport: {},	
 			clientResolution : info.clientResolution,
-				
+			devicePixelRatio : info.devicePixelRatio
 		};
 		
 		//sessionList.push( newSession );
 		sessionList[s] = newSession;
+		canvasList[s] = new Canvas(info.clientResolution.width, info.clientResolution.height);
 		numSession++;
 		lastSession = newSession;
 		module.exports.autoAlign();
@@ -41,6 +58,9 @@ module.exports = {
 	
 	removeSession : function(s) {
 		delete sessionList[s];
+		
+		//TODO : delete related guidelines
+		
 		numSession--;
 		module.exports.autoAlign();
 	},
@@ -54,7 +74,12 @@ module.exports = {
 					vx: 0,
 					vy: 0,
 					width: session.clientResolution.width, 
-					height: session.clientResolution.height};
+					height: session.clientResolution.height,
+
+					px : 0,
+					py : 0,
+					widthPixel: session.clientResolution.width, 
+					heightPixel: session.clientResolution.height};
 			
 		}
 	},
@@ -69,11 +94,18 @@ module.exports = {
 		//create composite viewport
 		var ps = lastSession;
 		
+		if(_.isEmpty(lastSession))
+			return;
+		
 		ps.clientViewport = {
 				vx: 0,
 				vy: 0,
 				width : 0,
-				height : 0
+				height : 0,
+				px : 0,
+				py : 0,
+				widthPixel : 0,
+				heightPixel : 0,
 		};
 		var comView = {
 				vx: 0,
@@ -82,7 +114,7 @@ module.exports = {
 				height : 0
 		};
 		
-		//ver 0.1 : asssumtion - all screens have same size, same orientation
+		//ver 0.1 : assumption - all screens have same size, same orientation
 		//mode - odd/even
 		
 		//for odd - parallel alignment
@@ -118,6 +150,8 @@ module.exports = {
 					comView.height += session.clientResolution.height;
 				
 				c++;
+				
+				
 			}
 		} else {
 			//for odd
@@ -165,7 +199,11 @@ module.exports = {
 					
 					//comView.height += session.height;
 				}
-				
+				session.clientViewport.px = session.clientViewport.vx;
+				session.clientViewport.py = session.clientViewport.vy;
+				session.clientViewport.widthPixel = session.clientViewport.width;
+				session.clientViewport.heightPixel = session.clientViewport.height;
+
 				ps = session;
 			}
 		}
@@ -199,6 +237,12 @@ module.exports = {
 						width: viewport.width / (numSession > 2 ? numSession/2 : 2) , 
 						height: (numSession>2 ? viewport.height / 2 : viewport.height),
 				};
+				
+				session.clientViewport.px = session.clientViewport.vx;
+				session.clientViewport.py = session.clientViewport.vy;
+				session.clientViewport.widthPixel = session.clientViewport.width;
+				session.clientViewport.heightPixel = session.clientViewport.height;
+
 				
 				c++;
 				ps = session;
@@ -261,16 +305,17 @@ module.exports = {
 	manageRender: function(img) {
 		totalRenderView = img;
 		var viewport = _webdriver.getViewport();	
-		var image = new Image();
-		
-		
+		img["image"] = "data:image/jpeg;base64," + img["image"] ;
 		for(var s in sessionList) {
-			//console.log("let's get the show in the road");
 			var session = sessionList[s];
-			
+			var image = new Image();
 		
-			var segCanvas = new Canvas(viewport.width,viewport.height);
+			//var segCanvas = new Canvas(viewport.width,viewport.height);
+			//var segCanvas = new Canvas(session.clientResolution.width, session.clientResolution.height);
+			var segCanvas = canvasList[s];
 			var segCtx = segCanvas.getContext('2d');
+			
+
 			
 			/*
 			image.onload = function() {
@@ -278,8 +323,7 @@ module.exports = {
 						0,0, session.clientResolution.width, session.clientResolution.height);	
 				
 				var segmentImg = img;
-				console.error(session);
-				
+
 				segmentImg["image"] = segCanvas.toDataURL();
 				segmentImg["index"] = session.index;
 				segmentImg["id"] = session.id;
@@ -290,7 +334,9 @@ module.exports = {
 			};
 			image.onerror = function(err) {
 				console.error(err);
+				console.error(viewport);
 				console.error(session);
+				
 			}
 
 			image.src = new Buffer(img.image, 'base64');
@@ -300,6 +346,7 @@ module.exports = {
 			
 			// Let clients deal this img... damn node-canvas
 			var segmentImg = img;
+			
 			
 			segmentImg["index"] = session.index;
 			segmentImg["id"] = session.id;
@@ -311,6 +358,216 @@ module.exports = {
 		}
 	},
 	
+	removeAllGuide : function () {
+		
+		guideIndex = 0;
+		guideList = [];
+		guidePoints = {};
+		guidedViewports = {};
+		
+	},
+	
+	addGuide : function(sid, angle, mode, pos, ori){
+		var s = module.exports.getSession(sid);
+
+		//checking
+		if( ((guideIndex+1) % 2) == (mode % 2)) {
+			guideList[guideIndex] = { id: s.id, angle: angle, position : pos, orientation: ori, mode : mode};
+		}
+
+		console.log("Guide Added : " );
+		console.log(guideList[guideIndex ]);
+		console.log("----");
+		
+		guideIndex = guideIndex + 1;
+		
+		if( (guideIndex % 2) == 0) {
+			module.exports.calculateViewport();
+		}
+		
+		module.exports.checkGuides();
+		
+	},
+	
+	// s as socket
+	getGuideListOf : function ( sid ) {
+		var s = module.exports.getSession(sid);
+		var list = [];
+		var i = 0;
+		for (; i<guideList.length; i++) {
+			if( guideList[i].id == sid)
+				list.push(guideList[i]);
+		}
+		
+		return list;
+	},
+	
+	checkGuides : function() {
+		var i = 0;
+		for( i = 0 ; i< guideList.length; i++) {
+			if( module.exports.getSession(guideList[i].id) === undefined ) {
+				delete guidedViewports[guideList[i].id];
+				//guideList.splice(i, 1);
+				if( i % 2 == 0 && guideList[i+1] !== undefined)
+					guideList.splice(i,2);
+				else if (i % 2 == 1 && guideList[i-1] !== undefined)
+					guideList.splice(i-1, 2);
+			}
+			
+		}
+		guideIndex = guideList.length;
+		
+			
+	},
+	
+	calculateViewport : function() {
+		
+		console.log("calcualting viewport...");
+		
+		module.exports.checkGuides();
+		
+		
+		// if there is no guides, treat it as classic
+		if( guideIndex < 2 && _.isEmpty(guidedViewports) ) {
+			console.log("there is no guides, treating it as classic....");
+			module.exports.autoAlign();
+			module.exports.setGuideMode(0);
+			return module.exports.getGuideMode();
+		}
+		
+		var i = 0;		
+		for( i = 0 ; i < (guideIndex) / 2 ; i++) {
+
+			 var source = guideList[2 * i ];
+			 var target = guideList[2 * i + 1];
+			 
+			 
+			 if(source === undefined)
+				 break;
+			 if(target === undefined)
+				 break;
+			 
+			 var sourceS = module.exports.getSession(source.id);
+			 var targetS = module.exports.getSession(target.id);
+			 
+			 var pairI = -1;
+			 var scaleFactor = 1;
+			 
+			 //find a pair of guides from same src and tar
+			 var j = i+1;
+			 for ( ; j< (guideIndex)/2 ; j++) {
+				 
+				 var s2 = guideList[2 * j ];
+				 var t2 = guideList[2 * j + 1];
+				 
+				 var s2S = module.exports.getSession(s2.id);
+				 var t2S = module.exports.getSession(t2.id);
+				 	 
+				 if( (s2S == sourceS && t2S == targetS ) || (s2S == targetS && t2S == sourceS)) {
+					 pairI = j;
+					 break;
+				 }
+			 }
+			 
+			 if( pairI != -1 ) {
+				 var s2 = guideList[2 * pairI ];
+				 var t2 = guideList[2 * pairI + 1];
+				 
+				 var s2S = module.exports.getSession(s2S.id);
+				 var t2S = module.exports.getSession(t2S.id);
+				 
+				 if( (s2S == targetS && t2S == sourceS)) {
+					 var tmp = s2;
+					 s2 = t2;
+					 t2 = tmp;
+				 }
+				 
+				 var dx1, dx2, dy1, dy2;
+				 // why does DPR not need? 
+				 dx1 = (source.position.x - s2.position.x) ;
+				 dy1 = (source.position.y - s2.position.y) ;
+				 
+				 dx2 = (target.position.x - t2.position.x) ;
+				 dy2 = (target.position.y - t2.position.y) ;
+
+				 if( dx1 != dx2) {
+					 scaleFactor = dx1/dx2; //for target
+				 } else if ( dy1 != dy2 ) {
+					 scaleFactor = dy1/dy2;
+				 }
+				 
+
+				
+				 if( guidedViewports[source.id] === undefined )
+					 guidedViewports[source.id] = {
+						 vx : 0, vy : 0, px : 0, py: 0,
+						 width: sourceS.clientResolution.width , height : sourceS.clientResolution.height,
+						 widthPixel : 0, heightPixel : 0,
+						 
+				 	};
+				 if (guidedViewports[target.id] === undefined ) 
+					 guidedViewports[target.id] = {
+						 vx : (guidedViewports[source.id].vx + source.position.x)  - target.position.x  * scaleFactor , vy : (guidedViewports[source.id].vy  + source.position.y)  - target.position.y  * scaleFactor , 
+						 px : 0  , py : 0 , 
+						 
+						 width: targetS.clientResolution.width * scaleFactor, height : targetS.clientResolution.height * scaleFactor ,
+						 widthPixel : 0, heightPixel : 0, 
+						 
+				 	};
+				 
+				 
+				 
+				 var minx = 0, miny = 0, maxx = 0, maxy = 0;
+				 var totalviewport = {width : 0, height: 0};
+				 for( var ss in guidedViewports) {
+					 if( guidedViewports[ss].vx <= minx)
+						 minx = guidedViewports[ss].vx;
+					 if( guidedViewports[ss].vy  <= miny)
+						 miny = guidedViewports[ss].vy ;
+					 if( guidedViewports[ss].vx + guidedViewports[ss].width >= maxx)
+						 maxx = guidedViewports[ss].vx + guidedViewports[ss].width;
+					 if( guidedViewports[ss].vy + guidedViewports[ss].height >= maxy)
+						 maxy = guidedViewports[ss].vy + guidedViewports[ss].height;
+				 }
+				 
+				 totalviewport.width = Math.round(maxx - minx);
+				 totalviewport.height = Math.round(maxy - miny);
+				 
+				
+				 for( var ss in guidedViewports) {
+					 var vs = module.exports.getSession(ss)
+					 guidedViewports[ss].px = guidedViewports[ss].vx - Math.round(minx) ;
+					 guidedViewports[ss].py = guidedViewports[ss].vy - Math.round(miny) ;
+					 guidedViewports[ss].widthPixel = guidedViewports[ss].width ;
+					 guidedViewports[ss].heightPixel = guidedViewports[ss].height ;
+					 
+					 module.exports.setSessionViewport( ss, guidedViewports[ss]);
+					 
+				 }
+				 
+				 
+				 module.exports.setViewport(totalviewport);
+				 
+				 console.log("calculated viewport size : ");
+				 console.log(totalviewport);
+				 
+			 }
+
+		}
+		
+	},
+	
+	
+	
+	setGuideMode : function( m ) {
+		guideMode = m;
+	},
+	
+	getGuideMode : function() {
+		return guideMode;
+	},
+
+	
 	getTotalRenderView : function() {
 		return totalRenderView;
 	},
@@ -320,8 +577,10 @@ module.exports = {
 	},
 	
 	setSessionViewport : function(s, viewport) {
-		if(s !== undefined && viewport !== undefined)
+		if(sessionList[s] !== undefined && viewport !== undefined)
 			sessionList[s].clientViewport = viewport;
+		else
+			console.error("Session Fault : Session " + s + " doesn't exist");
 	},
 	
 	//binded Ph

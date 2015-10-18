@@ -26,6 +26,9 @@ module.exports = {
 			//Session Add
 			_sessionManager.addSession(socket.id,data);
 			
+			socket.emit('mode', socket.id, _sessionManager.getGuideMode());
+			
+			
 			socket.emit('confirmed', 'over');
 		});
 		
@@ -38,6 +41,68 @@ module.exports = {
 			_sessionManager.handle(s, e, "phHandler");
 			
 		});
+		
+		socket.on('removeAllGuide', function() {
+			_sessionManager.removeAllGuide();
+			for( var i in socketRoom) {
+				
+				socketRoom[i].emit('arrowList', []);
+			}
+			
+		});
+		
+		socket.on('guideModeOn', function(){
+			
+			//_sessionManager.removeAllGuide();
+			_sessionManager.setGuideMode(1);
+			
+			
+			socket.broadcast.emit('mode', socket.id,1);
+			socket.emit('mode', socket.id,1);
+			
+			console.log("guide mode on");
+
+		});
+		
+		socket.on('guideModeOff', function() {
+			_sessionManager.setGuideMode(0);
+			socket.broadcast.emit('mode',socket.id, 0);
+			socket.emit('mode', socket.id, 0);
+
+			console.log("guide mode off");
+		});
+		
+		socket.on('outward', function(angle, pos, ori){
+			var s = socket.id;
+			
+			_sessionManager.addGuide(s, angle, 1, pos, ori);
+			_sessionManager.setGuideMode(2);
+			socket.broadcast.emit('mode', s, 2);
+			socket.emit('mode', s, 2);
+			var l = _sessionManager.getGuideListOf( s );
+			socket.emit('arrowList', l);
+			
+		});
+		
+		socket.on('inward', function(angle, pos, ori){
+			var s = socket.id;
+			
+			_sessionManager.addGuide(s, angle, 2, pos, ori);
+
+			_sessionManager.setGuideMode(1);
+			//socket.broadcast.emit('mode', s, 1);
+			//socket.emit('mode', s, 1);
+			
+			for( var i in socketRoom) {
+				
+				socketRoom[i].emit('mode', s, 1);
+				var l = _sessionManager.getGuideListOf( socketRoom[i].id );
+				if( l.length > 0)
+					socketRoom[i].emit('arrowList', l);
+			}
+			
+			
+		});
 			
 		socket.on('sendMessage', function(data){
 			console.log('sendMessage!');
@@ -47,6 +112,11 @@ module.exports = {
 			}
 			
     	});
+		
+		socket.on('closeOthersBar', function(){
+			socket.broadcast.emit('closeBar');
+		});
+		
 		socket.on('disconnect', function(data) {
 			console.log('disconnected');
 			if (socketRoom[socket.id] !== undefined){
@@ -54,11 +124,21 @@ module.exports = {
 				
 				socket.leave(socketRoom[socket.id]);
 				delete socketRoom[socket.id];
-				//delete lectures[key].attendee
-				
 				_sessionManager.removeSession(socket.id);
 				
-				//io.sockets.in(key.lectureId).emit('disconnect', key.userId);
+			}
+			
+			//update guides
+			//_sessionManager.checkGuides();
+			var v = _sessionManager.calculateViewport();
+			if( v != 0) {
+				for( var i in socketRoom) {
+					var l = _sessionManager.getGuideListOf( socketRoom[i].id );
+					if( l.length > 0)
+						socketRoom[i].emit('arrowList', l);
+				}
+			} else {
+				socket.broadcast.emit('mode', socket.id, v);
 			}
 			/*
 			var clients = io.sockets.clients(key);
@@ -72,6 +152,7 @@ module.exports = {
 		});
 		
 		socket.on('requestSessionList', function(){
+
 			var sessionList = _sessionManager.getSessionList();
 			console.log(sessionList);
 			socket.emit('sessionList', sessionList);

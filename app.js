@@ -13,6 +13,9 @@ var express = require('express')
 	cookieParser = require('cookie-parser'),
 	RedisStore = require('connect-redis')(session);
 
+var _ = require('underscore');
+
+
 var	webdriver = require('./webdriver'),
 	socketCtrl = require('./socketCtrl'),
 	renderCtrl = require('./renderCtrl');
@@ -81,7 +84,6 @@ server = exports.server = http.createServer(app).listen(app.get('port'), functio
 });
 var sessionManager =  require('./sessionManager');
 var sio = module.exports.io = io.listen(server);
-
 
 app.get('/goto', webdriver.gotourl);
 

@@ -4,10 +4,16 @@
 var socket = io.connect();
 var currentUrl;
 var pastUrl;
-var pastUrl;
 var pageViewport = {width: 1280, height:960};
 var viewport;
 var webview;
+
+
+//TODO : Initialize calibrator
+// Parameter : page width, height
+// (reference type?) canvas context
+
+
 $( document ).ready( function(){
 	
 	webview = $("#web_view");
@@ -16,11 +22,26 @@ $( document ).ready( function(){
 	$('#toggleBt').on('click', function(){
 		
 		$('#header-bar').slideToggle("fast");
+		socket.emit('closeOthersBar');
 
 	});
 	
+	var scaleGrid = document.getElementById('cal_view');
+    var scaleContext = scaleGrid.getContext('2d');
+    
+    scaleContext.canvas.width = window.innerWidth;
+    scaleContext.canvas.height = window.innerHeight;
+    
+    scaleContext.clearRect(0, 0, scaleGrid.width, scaleGrid.height);
+    scaleContext.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    scaleContext.fillRect(0,0,scaleGrid.width, scaleGrid.height);
+	
+    
+    drawGuide ( scaleContext, scaleGrid.width, scaleGrid.height);
+
+    
 	$(window).resize(function(){
-		
+		    
 		/*
 		webview.get(0).width = window.innerWidth;
 		webview.get(0).height = window.innerHeight;
@@ -46,9 +67,80 @@ $( document ).ready( function(){
 	        close: function(e, u) {
 	        	$("#rectangleArea").empty();
 	        }
-	 });
+		});
 		socket.emit('requestTotalRenderView');
 		socket.emit('requestSessionList');
+	});
+	
+	$('#removeAllGuides').on('click', function(e){
+		socket.emit('removeAllGuide');
+	});
+	
+	$('#cal_view').on('click', function(e){
+
+		var scaleGrid = document.getElementById('cal_view');
+		var scaleContext = scaleGrid.getContext('2d');   
+		var m = clickCalView( e, scaleGrid, scaleContext) ;
+		var ori = 0;
+		var message = '';
+		
+		if( m > 10) {
+			var sinangle = Math.sin(arrowAngle);
+			if( sinangle < 0.0001 && sinangle > -0.0001 )
+				ori = 0;
+			else
+				ori = 1;
+		}
+		
+		if( m == 11) {
+			message = 'outward';
+			socket.emit(message, arrowAngle, edgePoint, ori);
+		} 
+		else if(m == 21) {
+			message = 'inward';
+			socket.emit(message, arrowAngle, edgePoint, ori);
+		} else {
+			;
+		}
+		
+		
+	});
+	
+	$('#finishCal').on('click', function(){
+		
+		socket.emit('guideModeOff');
+
+		window.cancelAnimationFrame(arrowID);
+		$('#calibrationMode').hide();
+		
+		$('#header-bar').show("slide");
+		socket.emit('closeOthersBar');
+
+	});
+	
+	$('#screenCal').on('click', function(){
+
+		//enter Mode
+		socket.emit('guideModeOn');
+		
+	});
+	
+	$('#pivot').on('click', function(){
+		
+		if( mode == 1 ) {
+			var scaleGrid = document.getElementById('cal_view');
+			var scaleContext = scaleGrid.getContext('2d');
+			clickPivot( scaleGrid, scaleContext);
+		} else if (mode == 3) {
+			stopWindowFrame();
+			if( inwardStart.x <= 50 || inwardStart.x >= window.innerWidth -50)
+				ori = 0;
+			else
+				ori = 1;
+			socket.emit('inward', inwardAngle, inwardStart, ori);
+			
+		}
+		
 	});
 	
 	webview.get(0).width = window.innerWidth;
@@ -57,10 +149,51 @@ $( document ).ready( function(){
 	socket.emit('hello', 'guys', {
 		clientResolution: { width : webview.width(), 
 			height: webview.height()
-			}
+			},
+		devicePixelRatio : window.devicePixelRatio
 	});
 	socket.on('confirmed', function(data){
 		console.log("Session established - " + data);
+	});
+	
+	socket.on('closeBar', function(){
+		$('#header-bar').hide("slide","fast");
+	});
+	
+	socket.on('mode', function(id, m) {
+		
+		console.log("Guide Mode : " + m);
+		mode = m;
+		if(mode > 0) {
+
+			$('#calibrationMode').show();
+
+			//drawing 
+			
+
+			var scaleGrid = document.getElementById('cal_view');
+		    var scaleContext = scaleGrid.getContext('2d');
+
+		    //scaleContext.canvas.width = window.innerWidth;
+		    //scaleContext.canvas.height = window.innerHeight;
+		    drawGuide ( scaleContext, scaleGrid.width, scaleGrid.height);
+
+		} else {
+			window.cancelAnimationFrame(arrowID);
+			$('#calibrationMode').hide();
+		}
+	});
+	
+	socket.on('arrowList', function( list ) {
+		var scaleGrid = document.getElementById('cal_view');
+	    var scaleContext = scaleGrid.getContext('2d');
+
+		arrowList = list;
+		
+		clearCanvas(scaleContext, scaleGrid.width, scaleGrid.height);
+		drawPastGuides(scaleContext, scaleGrid.width, scaleGrid.height);
+		console.log("arrowList received");
+		console.log(arrowList);
 	});
 	
 	socket.on('totalRenderView', function(data){
@@ -153,6 +286,8 @@ $( document ).ready( function(){
 					var rh = u.size.height * pageViewport.width / canvas.height;
 					list[s].clientViewport.width= rw;
 					list[s].clientViewport.height = rh;
+					list[s].clientViewport.widthPixel= rw;
+					list[s].clientViewport.heightPixel = rh;
 					
 					socket.emit("setSessionViewport",  u.originalElement.get(0)["id"],  list[s].clientViewport);
 					
@@ -165,14 +300,16 @@ $( document ).ready( function(){
 					
 					 list[s].clientViewport.vx= rx;
 					 list[s].clientViewport.vy = ry;
+					 list[s].clientViewport.px= rx;
+					 list[s].clientViewport.py = ry;
 					socket.emit("setSessionViewport",   u.helper.get(0)["id"],  list[s].clientViewport);
 					
 				},
 			});
 			
 			
-			$("#total_viewDiv").append(newRect);
-			//$("#rectangleArea").append(newRect);
+			//$("#total_viewDiv").append(newRect);
+			$("#rectangleArea").append(newRect);
 			
 			
 		}
@@ -192,20 +329,21 @@ $( document ).ready( function(){
 		var image = new Image();
 		
 
-		//image.src = data.image;
-		
-		//image.src = new Buffer("data:image/jpeg;base64," + data.image, 'base64');
-		image.src = "data:image/jpeg;base64," + data.image;
 		
 		image.onload = function() {
 			//ctx.rect(0,0, canvas.width, canvas.height);
 			//ctx.fillStyle = "white";
 			//ctx.fill();
 			
-			ctx.drawImage(image, viewport.vx, viewport.vy, viewport.width, viewport.height,
+//			ctx.drawImage(image, viewport.vx, viewport.vy, viewport.width, viewport.height,
+//					0,0, canvas.width, canvas.height);
+			ctx.drawImage(image, viewport.px, viewport.py, viewport.widthPixel, viewport.heightPixel,
 					0,0, canvas.width, canvas.height);
-		
+
 		};
+		image.src = data.image;
+		//image.src = "data:image/jpeg;base64," + data.image;
+		
 		
 	});
 
@@ -240,5 +378,7 @@ var gotourl = function() {
         	};
         	
 	}});
+	socket.emit('closeOthersBar');
+
 }
 

@@ -14,12 +14,26 @@ block content
 				label#sessionNum
 				button#screenSet(type="button")
 					| Setting
+				button#screenCal(type="button")
+					| Calibration
 			
 		span#toggleBt.toggleBt
 	div#webcontainer
 		div#log
 		canvas#web_view( style="width: 100%; height: 100%;")
 		//canvas#web_view(width=1280, height=960)
+		
+	div#calibrationMode
+		canvas#cal_view( style="width: 100% ; height: 100%;")
+		div#pivot()
+		
+		button#removeAllGuides(type="button")
+			| Remove All
+		
+		button#finishCal(type="button")
+			| Done!
+
+	
 	div#screenSetModal(title="Setting")
 		form
 			label
@@ -32,5 +46,8 @@ block content
 				| Set Viewport
 		div#total_viewDiv
 			canvas#total_view( style="width=75%; height: 75%;")
+			div#rectangleArea
+			
+		
 			
 		
