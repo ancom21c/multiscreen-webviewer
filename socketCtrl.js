@@ -27,9 +27,11 @@ module.exports = {
 			_sessionManager.addSession(socket.id,data);
 			
 			socket.emit('mode', socket.id, _sessionManager.getGuideMode());
-			
-			
 			socket.emit('confirmed', 'over');
+		});
+		
+		socket.on('resizing', function(viewport){
+			_sessionManager.resizeOf(socket.id, viewport);
 		});
 		
 		socket.on('uiEvent', function(e) {
@@ -158,6 +160,7 @@ module.exports = {
 		socket.on('requestSessionList', function(){
 
 			var sessionList = _sessionManager.getSessionList();
+			console.log("session list:");
 			console.log(sessionList);
 			socket.emit('sessionList', sessionList);
 			

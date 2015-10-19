@@ -8,12 +8,6 @@ var pageViewport = {width: 1280, height:960};
 var viewport;
 var webview;
 
-
-//TODO : Initialize calibrator
-// Parameter : page width, height
-// (reference type?) canvas context
-
-
 $( document ).ready( function(){
 	
 	webview = $("#web_view");
@@ -47,17 +41,15 @@ $( document ).ready( function(){
     
 	$(window).resize(function(){
 		    
-		/*
+		
 		webview.get(0).width = window.innerWidth;
 		webview.get(0).height = window.innerHeight;
 
 		
-		socket.emit('hello', 'guys', {
-			clientResolution: { width : webview.width(), 
-				height: webview.height()
-				}
+		socket.emit('resizeing',  { width : window.innerWidth, 
+				height: window.innerHeight
 		});
-		*/
+		
 	});
 
 	console.log("Trying to connect mswebviewer-server");
@@ -117,7 +109,6 @@ $( document ).ready( function(){
 		
 		socket.emit('guideModeOff');
 
-		//window.cancelAnimationFrame(arrowID);
 		calibrator.stopWindowFrame();
 		$('#calibrationMode').hide();
 		
@@ -161,13 +152,9 @@ $( document ).ready( function(){
 			$('#calibrationMode').show();
 
 			//drawing 
-			
-
 			var scaleGrid = document.getElementById('cal_view');
 		    var scaleContext = scaleGrid.getContext('2d');
 
-		    //scaleContext.canvas.width = window.innerWidth;
-		    //scaleContext.canvas.height = window.innerHeight;
 		    calibrator.drawGuide ( scaleContext, scaleGrid.width, scaleGrid.height);
 
 		} else {
@@ -299,8 +286,6 @@ $( document ).ready( function(){
 				},
 			});
 			
-			
-			//$("#total_viewDiv").append(newRect);
 			$("#rectangleArea").append(newRect);
 			
 			
@@ -327,10 +312,12 @@ $( document ).ready( function(){
 			//ctx.fillStyle = "white";
 			//ctx.fill();
 			
-//			ctx.drawImage(image, viewport.vx, viewport.vy, viewport.width, viewport.height,
-//					0,0, canvas.width, canvas.height);
-			ctx.drawImage(image, viewport.px, viewport.py, viewport.widthPixel, viewport.heightPixel,
-					0,0, canvas.width, canvas.height);
+			//ctx.drawImage(image, viewport.px, viewport.py, viewport.widthPixel, viewport.heightPixel,
+			//		0,0, canvas.width, canvas.height);
+
+			
+			
+			ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
 		};
 		image.src = data.image;

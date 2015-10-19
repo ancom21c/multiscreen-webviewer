@@ -13,13 +13,12 @@ var canvas = require('./bindings')
   , Canvas = canvas.Canvas
   , Image = canvas.Image
   , cairoVersion = canvas.cairoVersion
-  , PixelArray = canvas.CanvasPixelArray
   , Context2d = require('./context2d')
   , PNGStream = require('./pngstream')
   , JPEGStream = require('./jpegstream')
   , FontFace = canvas.FontFace
   , fs = require('fs')
-  , package = require("../package.json");
+  , packageJson = require("../package.json");
 
 /**
  * Export `Canvas` as the module.
@@ -31,7 +30,7 @@ var Canvas = exports = module.exports = Canvas;
  * Library version.
  */
 
-exports.version = package.version;
+exports.version = packageJson.version;
 
 /**
  * Cairo version.
@@ -62,7 +61,6 @@ if (canvas.gifVersion) {
 exports.Context2d = Context2d;
 exports.PNGStream = PNGStream;
 exports.JPEGStream = JPEGStream;
-exports.PixelArray = PixelArray;
 exports.Image = Image;
 
 if (FontFace) {
@@ -99,12 +97,6 @@ require('./context2d');
  */
 
 require('./image');
-
-/**
- * PixelArray implementation.
- */
-
-require('./pixelarray');
 
 /**
  * Inspect canvas.

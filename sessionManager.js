@@ -10,6 +10,7 @@ var sessionIndex;
 var lastSession;
 var Canvas = require("canvas"),
 	Image = Canvas.Image;
+var	totalViewCanvas;
 
 
 var guideList;
@@ -27,11 +28,13 @@ module.exports = {
 		_webdriver = webdriver;
 		sessionIndex = 0;
 		lastSession = {};
+		
 		guideList = [];
 		guidePoints = {};
 		guideIndex = 0;
 		guideMode = 0;
 		guidedViewports = {};
+		
 	},
 	addSession : function(s, info) {
 		//info : 
@@ -302,60 +305,60 @@ module.exports = {
 		return sessionList.indexOf(sid);
 	},
 	
+	resizeOf : function(s, resolution) {
+		var session = sessionList[s];
+		session.clientResolution.width = resolution.width;
+		session.clientResolution.height = resolution.height;
+		
+	},
+	
 	manageRender: function(img) {
-		totalRenderView = img;
+		
 		var viewport = _webdriver.getViewport();	
 		img["image"] = "data:image/jpeg;base64," + img["image"] ;
-		for(var s in sessionList) {
-			var session = sessionList[s];
-			var image = new Image();
 		
-			//var segCanvas = new Canvas(viewport.width,viewport.height);
-			//var segCanvas = new Canvas(session.clientResolution.width, session.clientResolution.height);
-			var segCanvas = canvasList[s];
-			var segCtx = segCanvas.getContext('2d');
-			
+		//var bufferdImage = new Buffer(img["image"], 'base64');
+		var bufferedImage = img.image;
+		var image = new Image;
+		var url = img.url;
+		var width = img.width;
+		var height = img.height;
+		image.onload = function() {
+			for(var s in sessionList) {
 
-			
-			/*
-			image.onload = function() {
-				segCtx.drawImage(image, session.clientViewport.vx, session.clientViewport.vy, session.clientViewport.width, session.clientViewport.height,
-						0,0, session.clientResolution.width, session.clientResolution.height);	
-				
-				var segmentImg = img;
+				process.nextTick((function(ss) {
+					return function() {
+						//console.log('work', ss);
+						var session = sessionList[ss];
+						
+						var segCanvas = canvasList[ss];
+						var segCtx = segCanvas.getContext('2d');
+						var segmentImg = {};
 
-				segmentImg["image"] = segCanvas.toDataURL();
-				segmentImg["index"] = session.index;
-				segmentImg["id"] = session.id;
-				segmentImg["viewport"] = session.clientViewport;
-				segmentImg["pageViewport"] = viewport; 
-				
-				_webdriver.manageRender(s, segmentImg);
-			};
-			image.onerror = function(err) {
-				console.error(err);
-				console.error(viewport);
-				console.error(session);
-				
+						segCtx.drawImage(image, session.clientViewport.px, session.clientViewport.py, session.clientViewport.widthPixel, session.clientViewport.heightPixel,
+								0,0, session.clientResolution.width, session.clientResolution.height);	
+						
+						segmentImg["url"] = url;
+						segmentImg["width"] = width;
+						segmentImg["height"] = height;
+						segmentImg["image"] = segCanvas.toDataURL();
+						segmentImg["index"] = session.index;
+						segmentImg["id"] = session.id;
+						segmentImg["viewport"] = session.clientViewport;
+						segmentImg["pageViewport"] = viewport; 
+						
+						_webdriver.manageRender(ss, segmentImg);
+					};
+				})(s));	
 			}
-
-			image.src = new Buffer(img.image, 'base64');
-			*/
-			
-			
-			
-			// Let clients deal this img... damn node-canvas
-			var segmentImg = img;
-			
-			
-			segmentImg["index"] = session.index;
-			segmentImg["id"] = session.id;
-			segmentImg["viewport"] = session.clientViewport;
-			segmentImg["pageViewport"] = _webdriver.getViewport(); 
-			
-			_webdriver.manageRender(s, segmentImg);
-			
+		};
+		
+		image.onerror = function(err) {
+			console.error(err);
 		}
+		image.src = bufferedImage;
+		
+		totalRenderView = img;
 	},
 	
 	removeAllGuide : function () {

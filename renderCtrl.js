@@ -20,7 +20,11 @@ module.exports = {
 			if(document.body !== null)
 				document.body.bgColor = 'white';
 		});
-		currentPage.renderBase64('JPEG', function(arg){module.exports.repeater(arg)});
+		
+		process.nextTick( function(){
+			currentPage.renderBase64('JPEG', function(arg){module.exports.repeater(arg)});
+		}
+		);
 	},
 	
 	rendering : function( page, status) {
