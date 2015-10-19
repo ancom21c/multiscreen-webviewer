@@ -29,15 +29,20 @@ $( document ).ready( function(){
 	var scaleGrid = document.getElementById('cal_view');
     var scaleContext = scaleGrid.getContext('2d');
     
-    scaleContext.canvas.width = window.innerWidth;
-    scaleContext.canvas.height = window.innerHeight;
+    var calibrator = new Calibrator(); 
     
-    scaleContext.clearRect(0, 0, scaleGrid.width, scaleGrid.height);
-    scaleContext.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    scaleContext.fillRect(0,0,scaleGrid.width, scaleGrid.height);
-	
+    calibrator.scaleContext = scaleContext;
+     
+    calibrator.scaleContext.canvas.width = window.innerWidth;
+    calibrator.scaleContext.canvas.height = window.innerHeight;
     
-    drawGuide ( scaleContext, scaleGrid.width, scaleGrid.height);
+    calibrator.W = scaleGrid.width;
+    calibrator.H = scaleGrid.height;
+    
+    
+    calibrator.clearCanvas();
+    
+    calibrator.drawGuide ( calibrator.scaleContext, scaleGrid.width, scaleGrid.height);
 
     
 	$(window).resize(function(){
@@ -80,9 +85,11 @@ $( document ).ready( function(){
 
 		var scaleGrid = document.getElementById('cal_view');
 		var scaleContext = scaleGrid.getContext('2d');   
-		var m = clickCalView( e, scaleGrid, scaleContext) ;
+		var m = calibrator.clickCalView( e, scaleGrid, scaleContext) ;
 		var ori = 0;
 		var message = '';
+		var arrowAngle = calibrator.getArrowAngle();
+		var edgePoint = calibrator.getEdgePoint();
 		
 		if( m > 10) {
 			var sinangle = Math.sin(arrowAngle);
@@ -110,7 +117,8 @@ $( document ).ready( function(){
 		
 		socket.emit('guideModeOff');
 
-		window.cancelAnimationFrame(arrowID);
+		//window.cancelAnimationFrame(arrowID);
+		calibrator.stopWindowFrame();
 		$('#calibrationMode').hide();
 		
 		$('#header-bar').show("slide");
@@ -125,23 +133,7 @@ $( document ).ready( function(){
 		
 	});
 	
-	$('#pivot').on('click', function(){
-		
-		if( mode == 1 ) {
-			var scaleGrid = document.getElementById('cal_view');
-			var scaleContext = scaleGrid.getContext('2d');
-			clickPivot( scaleGrid, scaleContext);
-		} else if (mode == 3) {
-			stopWindowFrame();
-			if( inwardStart.x <= 50 || inwardStart.x >= window.innerWidth -50)
-				ori = 0;
-			else
-				ori = 1;
-			socket.emit('inward', inwardAngle, inwardStart, ori);
-			
-		}
-		
-	});
+
 	
 	webview.get(0).width = window.innerWidth;
 	webview.get(0).height = window.innerHeight;
@@ -163,8 +155,8 @@ $( document ).ready( function(){
 	socket.on('mode', function(id, m) {
 		
 		console.log("Guide Mode : " + m);
-		mode = m;
-		if(mode > 0) {
+		calibrator.mode = m;
+		if(m > 0) {
 
 			$('#calibrationMode').show();
 
@@ -176,10 +168,10 @@ $( document ).ready( function(){
 
 		    //scaleContext.canvas.width = window.innerWidth;
 		    //scaleContext.canvas.height = window.innerHeight;
-		    drawGuide ( scaleContext, scaleGrid.width, scaleGrid.height);
+		    calibrator.drawGuide ( scaleContext, scaleGrid.width, scaleGrid.height);
 
 		} else {
-			window.cancelAnimationFrame(arrowID);
+			calibrator.stopWindowFrame();
 			$('#calibrationMode').hide();
 		}
 	});
@@ -188,12 +180,12 @@ $( document ).ready( function(){
 		var scaleGrid = document.getElementById('cal_view');
 	    var scaleContext = scaleGrid.getContext('2d');
 
-		arrowList = list;
+		calibrator.arrowList = list;
 		
-		clearCanvas(scaleContext, scaleGrid.width, scaleGrid.height);
-		drawPastGuides(scaleContext, scaleGrid.width, scaleGrid.height);
+		calibrator.clearCanvas();
+		calibrator.drawPastGuides();
 		console.log("arrowList received");
-		console.log(arrowList);
+		
 	});
 	
 	socket.on('totalRenderView', function(data){

@@ -113,6 +113,10 @@ module.exports = {
 			
     	});
 		
+		socket.on('message', function(message) {
+            socket.broadcast.emit('message', message);
+        });
+		
 		socket.on('closeOthersBar', function(){
 			socket.broadcast.emit('closeBar');
 		});
