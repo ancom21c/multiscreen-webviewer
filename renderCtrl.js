@@ -21,10 +21,11 @@ module.exports = {
 				document.body.bgColor = 'white';
 		});
 		
+		var time = 24/1000;
+		
 		setTimeout( function(){
 			currentPage.renderBase64('JPEG', function(arg){module.exports.repeater(arg)});
-		}, 24/1000
-		);
+		}, time);
 	},
 	
 	rendering : function( page, status) {

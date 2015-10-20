@@ -8,6 +8,39 @@ var pageViewport = {width: 1280, height:960};
 var viewport;
 var webview;
 
+var initialY = null,
+previousY = null,
+bindScrollEvent = function(e){
+
+	var event = e.originalEvent;
+    previousY = initialY = event.touches[0].clientY;
+    
+    var element = $("#"+this.id);
+
+    // Pull to reload won't be activated if the element is not initially at scrollTop === 0
+    if(element[0].scrollTop <= 0){
+        element.on("touchmove", blockScroll);
+    }
+},
+blockScroll = function(e){
+
+	var event = e.originalEvent;
+	var element = $(this.id);
+    if(previousY && previousY < event.touches[0].clientY){ //Scrolling up
+        event.preventDefault();
+    }
+    else if(initialY >= event.touches[0].clientY){ //Scrolling down
+        //As soon as you scroll down, there is no risk of pulling to reload
+        element.off("touchmove");
+    }
+    previousY = event.touches[0].clientY;
+},
+unbindScrollEvent = function(e){
+	var element = $(this.id);
+	element.off("touchmove");
+};
+
+
 $( document ).ready( function(){
 
 	webview = $("#web_view");
@@ -34,18 +67,22 @@ $( document ).ready( function(){
 
 	});
 	
-	var scaleGrid = document.getElementById('cal_view');
-    var scaleContext = scaleGrid.getContext('2d');
+	//var scaleGrid = document.getElementById('cal_view');
+	var scaleGrid = $('#cal_view');
+    var scaleContext = scaleGrid[0].getContext('2d');
     
     var calibrator = new Calibrator(); 
-    calibrator.scaleGrid = scaleGrid;
+    calibrator.scaleGrid = scaleGrid[0];
     calibrator.scaleContext = scaleContext;
+    
+    scaleGrid.on("touchstart", bindScrollEvent);
+    scaleGrid.on("touchend", unbindScrollEvent);
      
     calibrator.scaleContext.canvas.width = window.innerWidth;
     calibrator.scaleContext.canvas.height = window.innerHeight;
     
-    calibrator.W = scaleGrid.width;
-    calibrator.H = scaleGrid.height;
+    calibrator.W = scaleGrid[0].width;
+    calibrator.H = scaleGrid[0].height;
     
     
     calibrator.clearCanvas();
@@ -87,13 +124,11 @@ $( document ).ready( function(){
 		socket.emit('removeAllGuide');
 	});
 	
-	$('#cal_view').on('click touchstart', function(e){
+	$('#cal_view').on('click', function(e){
 //		if( navigator.userAgent.match(/Android/i) ) {   // if you already work on Android system, you can        skip this step
 //			e.preventDefault();     //THIS IS THE KEY. You can read the difficult doc released by W3C to learn more.
 //		}
-		
-		var scaleGrid = document.getElementById('cal_view');
-		var scaleContext = scaleGrid.getContext('2d');   
+		 
 		var m = calibrator.clickCalView( e) ;
 		var ori = 0;
 		var message = '';
@@ -122,11 +157,17 @@ $( document ).ready( function(){
 		
 	});
 	
-	/*
+	
 	$('#cal_view').on('touchstart', function(e){
 
-		var scaleGrid = document.getElementById('cal_view');
-		var scaleContext = scaleGrid.getContext('2d');   
+		var m = calibrator.clickCalView( e) ;
+		
+		
+	});
+	
+
+	$('#cal_view').on('touchend', function(e){
+
 		var m = calibrator.clickCalView( e) ;
 		var ori = 0;
 		var message = '';
@@ -154,7 +195,7 @@ $( document ).ready( function(){
 		}
 		
 	});
-	*/
+	
 	
 	$('#finishCal').on('click', function(){
 		
@@ -203,10 +244,8 @@ $( document ).ready( function(){
 			$('#calibrationMode').show();
 
 			//drawing 
-			var scaleGrid = document.getElementById('cal_view');
-		    var scaleContext = scaleGrid.getContext('2d');
 
-		    calibrator.drawGuide ( scaleContext, scaleGrid.width, scaleGrid.height);
+		    calibrator.drawGuide ( scaleContext, scaleGrid[0].width, scaleGrid[0].height);
 
 		} else {
 			calibrator.stopWindowFrame();
@@ -215,8 +254,6 @@ $( document ).ready( function(){
 	});
 	
 	socket.on('arrowList', function( list ) {
-		var scaleGrid = document.getElementById('cal_view');
-	    var scaleContext = scaleGrid.getContext('2d');
 
 		calibrator.arrowList = list;
 		
