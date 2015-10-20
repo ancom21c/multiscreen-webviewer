@@ -4,9 +4,14 @@ html
     title
       | Web browser
     link(rel="stylesheet", href="/lib/jquery-ui/jquery-ui.min.css")
-  
+    meta(name="viewport",content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0,minimal-ui")
+    meta(name="mobile-web-app-capable",content="yes")
     script(src='/lib/jquery-1.11.1.min.js')
+    
+    script(src='/lib/modernizr-custom.js')
     script(src='/lib/jquery-ui/jquery-ui.js')
+    script(src='/lib/jquery.mobile-1.4.5/jquery.mobile-1.4.5.js')
+    script(src='/lib/jquery-ui/jquery.ui.touch-punch.min.js')
     script(src='/socket.io/socket.io.js')
     script(src='/lib/arrow.js')
     script(src='/lib/utils.js')

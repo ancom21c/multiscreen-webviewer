@@ -9,9 +9,23 @@ var viewport;
 var webview;
 
 $( document ).ready( function(){
-	
+
 	webview = $("#web_view");
 	eventHandler.init(webview, socket);
+	$.mobile.loading().hide();
+	$(document).delegate(".ui-content", "scrollstart", false);
+	
+	$(document).delegate('*', 'touchmove',function(e)
+			{
+			    if ($(this) !== $('#cal_view'))
+			    {
+			        e.preventDefault();
+			        //and /or
+			        return false;
+			    }
+			    //current event target is $altNav, handle accordingly
+			});
+	
 	
 	$('#toggleBt').on('click', function(){
 		
@@ -24,7 +38,7 @@ $( document ).ready( function(){
     var scaleContext = scaleGrid.getContext('2d');
     
     var calibrator = new Calibrator(); 
-    
+    calibrator.scaleGrid = scaleGrid;
     calibrator.scaleContext = scaleContext;
      
     calibrator.scaleContext.canvas.width = window.innerWidth;
@@ -73,11 +87,14 @@ $( document ).ready( function(){
 		socket.emit('removeAllGuide');
 	});
 	
-	$('#cal_view').on('click', function(e){
-
+	$('#cal_view').on('click touchstart', function(e){
+//		if( navigator.userAgent.match(/Android/i) ) {   // if you already work on Android system, you can        skip this step
+//			e.preventDefault();     //THIS IS THE KEY. You can read the difficult doc released by W3C to learn more.
+//		}
+		
 		var scaleGrid = document.getElementById('cal_view');
 		var scaleContext = scaleGrid.getContext('2d');   
-		var m = calibrator.clickCalView( e, scaleGrid, scaleContext) ;
+		var m = calibrator.clickCalView( e) ;
 		var ori = 0;
 		var message = '';
 		var arrowAngle = calibrator.getArrowAngle();
@@ -92,6 +109,7 @@ $( document ).ready( function(){
 		}
 		
 		if( m == 11) {
+			console.log(arrowAngle);
 			message = 'outward';
 			socket.emit(message, arrowAngle, edgePoint, ori);
 		} 
@@ -102,8 +120,41 @@ $( document ).ready( function(){
 			;
 		}
 		
+	});
+	
+	/*
+	$('#cal_view').on('touchstart', function(e){
+
+		var scaleGrid = document.getElementById('cal_view');
+		var scaleContext = scaleGrid.getContext('2d');   
+		var m = calibrator.clickCalView( e) ;
+		var ori = 0;
+		var message = '';
+		var arrowAngle = calibrator.getArrowAngle();
+		var edgePoint = calibrator.getEdgePoint();
+		
+		if( m > 10) {
+			var sinangle = Math.sin(arrowAngle);
+			if( sinangle < 0.0001 && sinangle > -0.0001 )
+				ori = 0;
+			else
+				ori = 1;
+		}
+		
+		if( m == 11) {
+			console.log(arrowAngle);
+			message = 'outward';
+			socket.emit(message, arrowAngle, edgePoint, ori);
+		} 
+		else if(m == 21) {
+			message = 'inward';
+			socket.emit(message, arrowAngle, edgePoint, ori);
+		} else {
+			;
+		}
 		
 	});
+	*/
 	
 	$('#finishCal').on('click', function(){
 		

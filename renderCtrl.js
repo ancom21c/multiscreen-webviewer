@@ -21,9 +21,9 @@ module.exports = {
 				document.body.bgColor = 'white';
 		});
 		
-		process.nextTick( function(){
+		setTimeout( function(){
 			currentPage.renderBase64('JPEG', function(arg){module.exports.repeater(arg)});
-		}
+		}, 24/1000
 		);
 	},
 	

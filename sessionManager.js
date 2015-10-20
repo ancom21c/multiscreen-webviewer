@@ -373,6 +373,8 @@ module.exports = {
 	addGuide : function(sid, angle, mode, pos, ori){
 		var s = module.exports.getSession(sid);
 
+		guideIndex = guideList.length;
+		
 		//checking
 		if( ((guideIndex+1) % 2) == (mode % 2)) {
 			guideList[guideIndex] = { id: s.id, angle: angle, position : pos, orientation: ori, mode : mode};
