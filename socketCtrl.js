@@ -28,6 +28,7 @@ module.exports = {
 			
 			socket.emit('mode', socket.id, _sessionManager.getGuideMode());
 			socket.emit('confirmed', 'over');
+			
 		});
 		
 		socket.on('resizing', function(viewport){
@@ -92,8 +93,6 @@ module.exports = {
 			_sessionManager.addGuide(s, angle, 2, pos, ori);
 
 			_sessionManager.setGuideMode(1);
-			//socket.broadcast.emit('mode', s, 1);
-			//socket.emit('mode', s, 1);
 			
 			for( var i in socketRoom) {
 				
@@ -134,8 +133,12 @@ module.exports = {
 				
 			}
 			
+			if(_sessionManager.getNumSession() == 0) {
+				_sessionManager.stopRendering();
+				return;
+			}
+			
 			//update guides
-			//_sessionManager.checkGuides();
 			var v = _sessionManager.calculateViewport();
 			if( v != 0) {
 				for( var i in socketRoom) {
@@ -146,12 +149,7 @@ module.exports = {
 			} else {
 				socket.broadcast.emit('mode', socket.id, v);
 			}
-			/*
-			var clients = io.sockets.clients(key);
-			for (var i = 0; i < clients.length; i++){
-				clients[i].leave(key);
-        	}
-        	*/
+			
 		});
 		socket.on('requestTotalRenderView', function(){
 			socket.emit('totalRenderView', _sessionManager.getTotalRenderView());			
@@ -180,7 +178,8 @@ module.exports = {
 		//io.sockets.emit('renderData', data);
 		
 		//send data for each session
-		socketRoom[sid].emit('renderData', data);
+		if(socketRoom[sid] !== undefined)
+			socketRoom[sid].emit('renderData', data);
 	}
 
 }

@@ -2,39 +2,44 @@ extends layout
 
 block content
 	div#headerArea
-		div#header-bar.ui-widget-header.ui-corner-all
-			form( action="javascript:gotourl()")
-				label
-					| URL
-				input#gotourl(type="text", name="gotourl")
-				button(type="submit")
-					| Go!
-				label
-					| Session 
-				label#sessionNum
-				button#screenSet(type="button")
-					| Setting
-				button#screenCal(type="button")
-					| Calibration
-			
+		div#header-bar.header-bar.ui-widget-header.ui-corner-all(data-role="header")
+			div.ui-grid-b
+				div.ui-block-a(data-mini="true")
+					label.ui-hidden-accessible(for="gotourl")
+						| URL
+					form( action="javascript:gotourl()")
+						div#urlbar
+							input#gotourl.ui-icon-search(type="url", name="gotourl", value="http://", data-clear-btn="true", data-inline="true", placeholder="http://")
+							button(type="submit", for="gotourl", data-icon="search", data-iconpos="left")
+								| Go!
+				div.ui-block-b( data-mini="true")
+					div.ui-field-contain
+						label(for="sessionNum")
+							| Session:
+						input#sessionNum(type="text", disabled="")
+				div.ui-block-c( data-mini="true")
+					div.ui-field-contain(style="margin-top: 0px;")
+						button#screenSet.ui-corner-all(type="button", data-rel="popup", data-position-to="window", data-transition="pop" )
+							| Mode 1
+						button#screenCal.ui-corner-all(type="button")
+							| Calibration
+
 		span#toggleBt.toggleBt
 	div#webcontainer
 		div#log
-		canvas#web_view( style="width: 100%; height: 100%;")
-		//canvas#web_view(width=1280, height=960)
-		
+		//canvas#web_view( style="width: 100%; height: 100%;")
+		img#web_view( style="width: 100%; height: 100%;",alt="webview")
 	div#calibrationMode
 		canvas#cal_view( style="width: 100% ; height: 100%;")
-		//div#pivot()
 		
-		button#removeAllGuides(type="button")
+		button#removeAllGuides(type="button", data-role="button")
 			| Remove All
 		
-		button#finishCal(type="button")
+		button#finishCal(type="button", data-role="button")
 			| Done!
 
 	
-	div#screenSetModal(title="Setting")
+	div#screenSetModal(title="Setting", data-role="popup", data-overlay-theme="b", data-theme="a", data-dismissible="false")
 		form
 			label
 				| Page Width
@@ -42,12 +47,10 @@ block content
 			label
 				| Height
 			input#pHeight(type="text", name="pHeight")
-			button#setViewport(type="button")
+			button#setViewport(type="button", ddata-rel="back" data-transition="flow")
 				| Set Viewport
+
 		div#total_viewDiv
 			canvas#total_view( style="width=75%; height: 75%;")
 			div#rectangleArea
 			
-		
-			
-		

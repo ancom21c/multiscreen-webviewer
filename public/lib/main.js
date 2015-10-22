@@ -1,13 +1,16 @@
 /**
  * New node file
  */
+
+//var io = require('socket.io-client');
+//var blobToImage = require('./blob');
 var socket = io.connect();
 var currentUrl;
 var pastUrl;
 var pageViewport = {width: 1280, height:960};
 var viewport;
 var webview;
-
+var lastImage;
 var initialY = null,
 previousY = null,
 bindScrollEvent = function(e){
@@ -106,8 +109,8 @@ $( document ).ready( function(){
 	console.log("Trying to connect mswebviewer-server");
 
 	$('#screenSet').on('click', function(){
+		console.log("call dialog");
 		$('#screenSetModal').dialog({
-	       
 	        resizable: false,
 	        width:'auto',
 	        height:'auto',
@@ -116,6 +119,7 @@ $( document ).ready( function(){
 	        	$("#rectangleArea").empty();
 	        }
 		});
+		
 		socket.emit('requestTotalRenderView');
 		socket.emit('requestSessionList');
 	});
@@ -125,10 +129,7 @@ $( document ).ready( function(){
 	});
 	
 	$('#cal_view').on('click', function(e){
-//		if( navigator.userAgent.match(/Android/i) ) {   // if you already work on Android system, you can        skip this step
-//			e.preventDefault();     //THIS IS THE KEY. You can read the difficult doc released by W3C to learn more.
-//		}
-		 
+
 		var m = calibrator.clickCalView( e) ;
 		var ori = 0;
 		var message = '';
@@ -218,8 +219,8 @@ $( document ).ready( function(){
 	
 
 	
-	webview.get(0).width = window.innerWidth;
-	webview.get(0).height = window.innerHeight;
+	webview.width(window.innerWidth);
+	webview.height( window.innerHeight);
 
 	socket.emit('hello', 'guys', {
 		clientResolution: { width : webview.width(), 
@@ -269,19 +270,20 @@ $( document ).ready( function(){
 		var ctx = canvas.getContext("2d");
 		var image = new Image();
 		
-		pageViewport = data.pageViewport;
-		image.src = data.image;
-	
-		//image.src = "data:image/jpeg;base64," + data.image;
-		
-		//canvas operation - scaling down
-
 		image.onload = function() {
 			ctx.rect(0,0, canvas.width, canvas.height);
 			ctx.fillStyle = "white";
 			ctx.fill();
 		    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-		};
+		};		
+		
+		pageViewport = data.pageViewport;
+
+		//canvas operation - scaling down
+		if( data.image != "" ) {
+			image.src = data.image;
+		}	
+		
 		$("#pWidth").val(pageViewport.width);
 		$("#pHeight").val(pageViewport.height);
 		
@@ -386,31 +388,18 @@ $( document ).ready( function(){
 			pastUrl = currentUrl;
 			$("#gotourl").val(currentUrl);
 		}
-		$("#sessionNum").text(data.id);
+		$("#sessionNum").val(data.id);
 		
 		viewport = data.viewport;
-		var canvas = $("#web_view").get(0);
-		var ctx = canvas.getContext("2d");
-		var image = new Image();
-		
 
 		
-		image.onload = function() {
-			//ctx.rect(0,0, canvas.width, canvas.height);
-			//ctx.fillStyle = "white";
-			//ctx.fill();
-			
-			//ctx.drawImage(image, viewport.px, viewport.py, viewport.widthPixel, viewport.heightPixel,
-			//		0,0, canvas.width, canvas.height);
-
-			
-			
-			ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-		};
-		image.src = data.image;
-		//image.src = "data:image/jpeg;base64," + data.image;
+		//webview.src = blobToImage(data.image);
 		
+		webview.get(0).src = data.image;
+		webview.width ( window.innerWidth);
+		webview.height (window.innerHeight);
+
+		lastImage = webview.get(0).src;
 		
 	});
 
@@ -435,15 +424,7 @@ var gotourl = function() {
         url: "/goto",
         data: { url: url,  },
         success:function(result){
-        	var canvas = $("#web_view").get(0);
-        	var ctx = canvas.getContext("2d");
 
-        	var image = new Image();
-        	image.src = "data:image/png;base64," + result.image;
-        	image.onload = function() {
-        	    ctx.drawImage(image, 0, 0);
-        	};
-        	
 	}});
 	socket.emit('closeOthersBar');
 

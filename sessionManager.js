@@ -1,19 +1,20 @@
 var _ = require('underscore');
+var gm = require('gm');
 
 //session list
-var sessionList;
-var canvasList;
-var numSession;
+var sessionList = {};
+var canvasList = {};
+var numSession = 0;
 var _webdriver;
 var totalRenderView;
-var sessionIndex;
-var lastSession;
+var sessionIndex = 0;
+var lastSession = {};
 var Canvas = require("canvas"),
 	Image = Canvas.Image;
 var	totalViewCanvas;
 
 
-var guideList;
+var guideList = [];
 var guideIndex;
 var guideMode; // 0 : init, 1 : Guide(out), 2 : Guide(in)
 var guidePoints;
@@ -34,6 +35,13 @@ module.exports = {
 		guideIndex = 0;
 		guideMode = 0;
 		guidedViewports = {};
+		totalRenderView = { url: "about:blank"
+					, width: '1280'
+					, height: '960'
+					, image: ""
+					, pageViewport : webdriver.getViewport()
+					};
+		
 		
 	},
 	addSession : function(s, info) {
@@ -57,6 +65,8 @@ module.exports = {
 		numSession++;
 		lastSession = newSession;
 		module.exports.autoAlign();
+		
+		_webdriver.startRendering();
 	},
 	
 	removeSession : function(s) {
@@ -68,7 +78,13 @@ module.exports = {
 		module.exports.autoAlign();
 	},
 	
+	getNumSession : function() {
+		return numSession;
+	},
+	
 	alignSessionInfo : function() {
+
+		
 		for( var s in sessionList) {
 			var session = sessionList[s];
 			
@@ -85,6 +101,7 @@ module.exports = {
 					heightPixel: session.clientResolution.height};
 			
 		}
+		
 	},
 	
 
@@ -293,7 +310,11 @@ module.exports = {
 	},
 	
 	getSession : function(sid) {
-		return sessionList[sid];
+		if (sessionList !== undefined && sessionList[sid] !== undefined)
+			return sessionList[sid];
+		else 
+			return null;
+
 	},
 	
 	getSessionList : function() {
@@ -312,51 +333,56 @@ module.exports = {
 		
 	},
 	
+	stopRendering : function() {
+		if(_webdriver !== undefined)
+			_webdriver.stopRendering();
+	},
+	
 	manageRender: function(img) {
 		
 		var viewport = _webdriver.getViewport();	
-		img["image"] = "data:image/jpeg;base64," + img["image"] ;
+		//var bufferedImage = new Buffer(img.image, 'base64');
+		var bufferedImage = 'save.jpg';
+		//img["image"] = "data:image/jpeg;base64," + img["image"] ;
 		
-		//var bufferdImage = new Buffer(img["image"], 'base64');
-		var bufferedImage = img.image;
-		var image = new Image;
 		var url = img.url;
 		var width = img.width;
 		var height = img.height;
-		image.onload = function() {
-			for(var s in sessionList) {
+	
+		
+		var gmImg = gm(bufferedImage);
+		
+		var segmentImg = {};
 
-				process.nextTick((function(ss) {
-					return function() {
-						//console.log('work', ss);
-						var session = sessionList[ss];
-						
-						var segCanvas = canvasList[ss];
-						var segCtx = segCanvas.getContext('2d');
-						var segmentImg = {};
+		segmentImg["url"] = url;
+		segmentImg["width"] = width;
+		segmentImg["height"] = height;
+		segmentImg["image"] = img.image;
+		segmentImg["pageViewport"] = viewport; 
+		
+		for(var s in sessionList) {
+			process.nextTick((function(ss) {
+				return function() {
+					var session = sessionList[ss];
+					var croppedImg = gmImg.crop(session.clientViewport.widthPixel, session.clientViewport.heightPixel, session.clientViewport.px, session.clientViewport.py);
+					croppedImg.toBuffer(function (err, buffer) {
+						  if (err) {
+							  return;
+						  }
+						var buf = buffer.toString('base64');
 
-						segCtx.drawImage(image, session.clientViewport.px, session.clientViewport.py, session.clientViewport.widthPixel, session.clientViewport.heightPixel,
-								0,0, session.clientResolution.width, session.clientResolution.height);	
-						
-						segmentImg["url"] = url;
-						segmentImg["width"] = width;
-						segmentImg["height"] = height;
-						segmentImg["image"] = segCanvas.toDataURL();
+						segmentImg["image"] = "data:image/jpeg;base64," + buf ;
 						segmentImg["index"] = session.index;
 						segmentImg["id"] = session.id;
 						segmentImg["viewport"] = session.clientViewport;
-						segmentImg["pageViewport"] = viewport; 
 						
 						_webdriver.manageRender(ss, segmentImg);
-					};
-				})(s));	
-			}
-		};
-		
-		image.onerror = function(err) {
-			console.error(err);
+					});
+					
+				
+				};
+			})(s));	
 		}
-		image.src = bufferedImage;
 		
 		totalRenderView = img;
 	},
@@ -420,9 +446,7 @@ module.exports = {
 			}
 			
 		}
-		guideIndex = guideList.length;
-		
-			
+		guideIndex = guideList.length;	
 	},
 	
 	calculateViewport : function() {
@@ -430,8 +454,7 @@ module.exports = {
 		console.log("calcualting viewport...");
 		
 		module.exports.checkGuides();
-		
-		
+	
 		// if there is no guides, treat it as classic
 		if( guideIndex < 2 && _.isEmpty(guidedViewports) ) {
 			console.log("there is no guides, treating it as classic....");
@@ -478,8 +501,8 @@ module.exports = {
 				 var s2 = guideList[2 * pairI ];
 				 var t2 = guideList[2 * pairI + 1];
 				 
-				 var s2S = module.exports.getSession(s2S.id);
-				 var t2S = module.exports.getSession(t2S.id);
+				 var s2S = module.exports.getSession(s2.id);
+				 var t2S = module.exports.getSession(t2.id);
 				 
 				 if( (s2S == targetS && t2S == sourceS)) {
 					 var tmp = s2;
@@ -602,11 +625,12 @@ module.exports = {
 		
 		// scaledPointX = sx + offsetx * vw / cw
 		
-		if( s !== undefined){
+		if( s !== undefined && s !== null){
 		
-			event.pageX = s.clientViewport.vx + event.clientX * s.clientViewport.width / s.clientResolution.width ; 
-			event.pageY = s.clientViewport.vy + event.clientY * s.clientViewport.height / s.clientResolution.height ; 
+			event.pageX = s.clientViewport.px + event.clientX * s.clientViewport.widthPixel / s.clientResolution.width ; 
+			event.pageY = s.clientViewport.py + event.clientY * s.clientViewport.heightPixel / s.clientResolution.height ; 
 		}
+
 		/*
 		if(handler == "phHandler")
 			module.exports.phHandler(event);
@@ -617,12 +641,12 @@ module.exports = {
 	
 	
 	phHandler : function( event){
-		
-		
-		
 		//handle Event
 		//mouse events:
 		//click dblclick mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave
+		if(_webdriver === undefined)
+			return;
+		
 		if(event.type.indexOf("click") != -1){
 			if(event.which == 1)
 				event["button"] = 'left';
@@ -646,6 +670,7 @@ module.exports = {
 		//0x08000000: An Alt key on the keyboard is pressed
 		//0x10000000: A Meta key on the keyboard is pressed
 		//0x20000000: A keypad button is pressed
+		
 		if(event.type.indexOf("key") != -1) {
 			
 			var modifier = 0;

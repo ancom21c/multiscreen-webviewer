@@ -11,7 +11,10 @@ var express = require('express')
 	redis = require('redis'),
 	session = require('express-session'),
 	cookieParser = require('cookie-parser'),
+	cluster = require('cluster'),
 	RedisStore = require('connect-redis')(session);
+
+var numCPUs = require('os').cpus().length;
 
 var _ = require('underscore');
 
@@ -26,6 +29,8 @@ var app = exports.app = express();
 var port = exports.port = +process.argv[2] || process.env.PORT || 6789; 
 var server = http.createServer(app);
 var io = require('socket.io');
+
+process.env.PATH = process.env.PATH + ":bin:node_modules/.bin:/usr/local/bin:/opt/local/bin";
 
 if (process.env.REDISTOGO_URL) {
   var rtg   = require('url').parse(process.env.REDISTOGO_URL);
@@ -91,3 +96,8 @@ socketCtrl.index(sio, sessionManager);
 webdriver.init( renderCtrl, sessionManager, socketCtrl);
 
 sio.sockets.on('connection', socketCtrl.connect);
+
+process.on('exit',function(){
+	webdriver.die();
+});
+

@@ -13,18 +13,18 @@ var eventHandler = (function(window, undefined) {
 	}
 	
 	function bindFunc(e){
-		if(e.target["nodeName"] != "CANVAS" && e.target["nodeName"] != "BODY" ) {
+		//if(e.target["nodeName"] != "CANVAS" && e.target["nodeName"] != "BODY" ) {
+		if(e.target["nodeName"] != "IMG" && e.target["nodeName"] != "BODY" ) {
 			return;
 		}
-			
-		var event = new Object();
-		
+				
+		var event = new Object();	
 		var rplist = "currentTarget delegateTarget fromElement target toElement view handleObj originalEvent"
 		for(var property in e) {
 			if( e.hasOwnProperty(property) && typeof e[property] != 'function' && rplist.indexOf(property) == -1) 
 				event[property] = e[property];
 		}
-		//console.log(event);
+
 		socket.emit('uiEvent', event);
 	}
 	
